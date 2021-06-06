@@ -13,7 +13,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-from cpe367_wav import cpe367_wav
+#from cpe367_wav import cpe367_wav
 from cpe367_sig_analyzer import cpe367_sig_analyzer
 
 
@@ -59,7 +59,9 @@ def process_wav(fpath_sig_in):
 	s2.print_desc()
 	
 	# to do: setup filters
-	
+	m = 10
+	bk = 1 / M #Average LPF
+
 	# process input	
 	xin = 0
 	for n_curr in range(s2.get_len()):
