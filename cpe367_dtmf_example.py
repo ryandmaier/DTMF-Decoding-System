@@ -21,22 +21,9 @@ from cpe367_sig_analyzer import cpe367_sig_analyzer
 #----DTMF Tone Frequencies (Hz) [row, column]----#
 f1 = [697, 1209]
 f2 = [697, 1336]
-f3 = [697, 1477]
-fA = [697, 1633]
 f4 = [770, 1209]
 f5 = [770, 1336]
-f6 = [770, 1477]
-fB = [770, 1633]
-f7 = [853, 1209]
-f8 = [852, 1336]
-f9 = [852, 1477]
-fC = [852, 1633]
-fstar = [941, 1209]	#f*
-f0 = [941, 1336]
-fpound = [941, 1477]
-fD = [941, 1633]
-
-
+#Only testing for these 4 freq.
 
 
 ############################################
@@ -61,6 +48,26 @@ def process_wav(fpath_sig_in):
 	# to do: setup filters
 	m = 10
 	bk = 1 / M #Average LPF
+
+	#----------BPF Set Up--------------#
+	#w0 for dif frequencies
+	w697 = 0.3485 * math.pi
+	w770 = 0.385 * math.pi
+	w1209 = 0.6045 * math.pi
+	w1336 = 0.668 * math.pi
+	w0 = [w697, w770, w1209, w1336] #Array w/ each filter phase
+	
+	#Radius Value 0.9 <= r < 1.0
+	r = 0.95
+	g = 1 - r #Gain factor (from doc)
+
+	#Constant Coefficients
+	b0 = g
+	a2 = r ** 2
+	#loop through w0 for dif bandpass filters
+	a1 = r * math.cos() #varies with phase
+
+	#y[n] = b0 * x[n] + a1 * y[n-1] + a2 * y[n-2] (Next Step)
 
 	# process input	
 	xin = 0
