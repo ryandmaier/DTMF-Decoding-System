@@ -78,14 +78,14 @@ def process_wav(fpath_sig_in):
 	#Radius Value 0.9 <= r < 1.0
 	r = 0.78
 	g = round(1 - r,6) #Gain factor (from doc)
-	
 
 	#Converting Bk coeffecients to be Integer-Based
-	C = 9 				#Accuracy Constant (2^C)
+	C = 5 				#Accuracy Constant (2^C)
 	b0 = int(round(g * (2 ** C)))
-		#a1 is variable so done in loop
 	a2 = int( round((r**2) * (2**C)) )
-	
+	#b0 = g
+	#a2 = r ** 2
+
 	# y[n] = b0 * x[n] + a1 * y[n-1] + a2 * y[n-2] (Next Step)
 	# y[n] = g * x[n] + 2r*cos(w) * y[n-1] - r^2 * y[n-2]
 
@@ -104,17 +104,19 @@ def process_wav(fpath_sig_in):
 			
 			#Round Bk coefficients for Integer-Based Digital Filter
 			a1 = int( round(2*r*math.cos(w)*(2 ** C)) )
+			#a1 = 2*r*math.cos(w)
 
 			print("i =",i," , f_bp =",round(w * 2000/math.pi,5))
 			print("fvtool([",g,"],[1,-",2*r*math.cos(w),",",r*r,"],'Fs',4000)")
 			# y[n] = g * x[n] + 2r*cos(w) * y[n-1] - r^2 * y[n-2]
 			
 			yout = b0*fifo_in.get(0) + a1 *fifo_outs[i].get(0) - a2*fifo_outs[i].get(1)
-			yout = int(round(yout >> C)) #Right shift by C again
+			yout = int(yout >> C) #Right shift by C again
+			#yout = int(yout)
 
 			fifo_outs[i].update(yout)
 			avg_prev = 0
-			n_avg = 20
+			n_avg = 18
 			for j in range(n_avg): # takes average of last n_avg youts, similar effect to Low Pass Filter
 				avg_prev += abs(fifo_outs[i].get(j))
 			avg_prev = avg_prev/n_avg
