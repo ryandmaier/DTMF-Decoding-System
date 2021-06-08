@@ -67,29 +67,34 @@ def process_wav(fpath_sig_in):
 
 	#Radius Value 0.9 <= r < 1.0
 	r = 0.95
-	g = 1 - r #Gain factor (from doc)
+	g = round(1 - r,6) #Gain factor (from doc)
 
 	#Constant Coefficients
 	b0 = g
-	a2 = r ** 2
+	a2 = -(r ** 2)
 	#loop through w0 for dif bandpass filters
-	a1 = r * math.cos(w0[0]) #varies with phase
+	a1 = 2 * r * math.cos(w0[0]) #varies with phase
 
 	# y[n] = b0 * x[n] + a1 * y[n-1] + a2 * y[n-2] (Next Step)
-	# y[n] = g * x[n] + 2r*cos(w) * y[n-1] + r^2 * y[n-2]
+	# y[n] = g * x[n] + 2r*cos(w) * y[n-1] - r^2 * y[n-2]
 
 	# process input
 	xin = 0
 	for n_curr in range(s2.get_len()):
 		xin = s2.get('xin',n_curr)
 		fifo_in.update(xin)
-		for i in range(len(w0)):
+
+		symbol_val_det = 0
+
+		for i in range(len(w0)): # for each frequency
 			w = w0[i]
-			yout = 0 # y[n] = g * x[n] + 2r*cos(w) * y[n-1] + r^2 * y[n-2]
-			# print(i,"w -> [",g,",",2*r*math.cos(w),",",r*r,"]")
-			print(i,": fvtool([",g,"],[1, -",2*r*math.cos(w),", -",r*r,"],’Fs’,4000)")
-			# add yout to one of the sigs
+			print("i =",i," , f_bp =",round(w * 2000/math.pi,5))
+			print("fvtool([",g,"],[1,-",2*r*math.cos(w),",",r*r,"],'Fs',4000)")
+			# y[n] = g * x[n] + 2r*cos(w) * y[n-1] - r^2 * y[n-2]
+			yout = round(g*fifo_in.get(0) + 2*r*math.cos(w)*fifo_outs[i].get(1) - r*r*fifo_outs[i].get(2))
 			fifo_outs[i].update(yout)
+			s2.set('sig_2',n_curr,yout) # record yout in sig_2 to check the plot, which rn looks wrong
+
 
 		########################
 		# evaluate each filter
@@ -102,12 +107,12 @@ def process_wav(fpath_sig_in):
 
 		########################
 		# combine results from filtering stages
-		symbol_val_det = 0
 
 		# save intermediate signals as needed, for plotting
 		#  add signals to this list, as desired!
 		s2.set('sig_1',n_curr,xin)
-		s2.set('sig_2',n_curr,2 * xin)
+		# s2.set('sig_2',n_curr,2 * xin)
+
 
 		# save detector symbol
 		s2.set('symbol_det',n_curr,symbol_val_det)
