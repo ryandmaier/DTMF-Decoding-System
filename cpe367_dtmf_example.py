@@ -76,12 +76,12 @@ def process_wav(fpath_sig_in):
 		fifo_outs[i] = ff
 
 	#Radius Value 0.9 <= r < 1.0
-	r = 0.9501
+	r = 0.78
 	g = round(1 - r,6) #Gain factor (from doc)
 	
 
 	#Converting Bk coeffecients to be Integer-Based
-	C = 11 				#Accuracy Constant (2^C)
+	C = 9 				#Accuracy Constant (2^C)
 	b0 = int(round(g * (2 ** C)))
 		#a1 is variable so done in loop
 	a2 = int( round((r**2) * (2**C)) )
@@ -96,7 +96,7 @@ def process_wav(fpath_sig_in):
 		xin = s2.get('xin',n_curr)
 		fifo_in.update(xin)
 
-		determined_freqs = [0, 0, 0, 0]
+		determined_freqs = [0, 0, 0, 0]	#Determined outputs of filters
 
 		# loop for each frequency - Applies BPF, abs(), LPF w avg, and determines if each freq is present
 		for i in range(len(w0)):
@@ -111,7 +111,6 @@ def process_wav(fpath_sig_in):
 			
 			yout = b0*fifo_in.get(0) + a1 *fifo_outs[i].get(0) - a2*fifo_outs[i].get(1)
 			yout = int(round(yout >> C)) #Right shift by C again
-			print("yout =", yout)
 
 			fifo_outs[i].update(yout)
 			avg_prev = 0
@@ -119,13 +118,25 @@ def process_wav(fpath_sig_in):
 			for j in range(n_avg): # takes average of last n_avg youts, similar effect to Low Pass Filter
 				avg_prev += abs(fifo_outs[i].get(j))
 			avg_prev = avg_prev/n_avg
-			guess = 0
-			if avg_prev>16: # if avg_prev is above the threshold, the frequency is assumed to be present
-				guess = 1
-			determined_freqs[i] = guess # record 1 if frequency w is present in the signal for this n_curr
-			sig = 'sig_' + str(i+1) # sig_1 through sig_4 - plots of the guesses for each w
-			s2.set(sig,n_curr,guess) # record sig_i plot of frequency guess
+			determined_freqs[i] = avg_prev
 
+		if determined_freqs[0] > determined_freqs[1]:
+			determined_freqs[0] = 1
+			determined_freqs[1] = 0
+		else:
+			determined_freqs[0] = 0
+			determined_freqs[1] = 1
+		
+		if determined_freqs[2] > determined_freqs[3]:
+			determined_freqs[2] = 1
+			determined_freqs[3] = 0
+		else:
+			determined_freqs[2] = 0
+			determined_freqs[3] = 1
+		
+		for i in range(len(w0)):
+			sig = 'sig_' + str(i+1) # sig_1 through sig_4 - plots of the guesses for each w
+			s2.set(sig,n_curr,determined_freqs[i]) # record sig_i plot of frequency guess
 
 		########################
 		# evaluate each filter
@@ -202,8 +213,8 @@ def main():
 		return False
 
 	# assign file name
-	fpath_sig_in = 'dtmf_signals_slow.txt'
-	# fpath_sig_in = 'dtmf_signals_fast.txt'
+	#fpath_sig_in = 'dtmf_signals_slow.txt'
+	fpath_sig_in = 'dtmf_signals_fast.txt'
 
 
 	# let's do it!
