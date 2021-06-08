@@ -91,9 +91,10 @@ def process_wav(fpath_sig_in):
 			print("i =",i," , f_bp =",round(w * 2000/math.pi,5))
 			print("fvtool([",g,"],[1,-",2*r*math.cos(w),",",r*r,"],'Fs',4000)")
 			# y[n] = g * x[n] + 2r*cos(w) * y[n-1] - r^2 * y[n-2]
-			yout = round(g*fifo_in.get(0) + 2*r*math.cos(w)*fifo_outs[i].get(1) - r*r*fifo_outs[i].get(2))
+			yout = g*fifo_in.get(0) + 2*r*math.cos(w)*fifo_outs[i].get(0) - r*r*fifo_outs[i].get(1)
+			yout = int(round(yout))
 			fifo_outs[i].update(yout)
-			s2.set('sig_2',n_curr,yout) # record yout in sig_2 to check the plot, which rn looks wrong
+			s2.set('sig_2',n_curr,yout) # record yout in sig_2 to check the plot
 
 
 		########################
