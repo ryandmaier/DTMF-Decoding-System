@@ -94,7 +94,16 @@ def process_wav(fpath_sig_in):
 			yout = g*fifo_in.get(0) + 2*r*math.cos(w)*fifo_outs[i].get(0) - r*r*fifo_outs[i].get(1)
 			yout = int(round(yout))
 			fifo_outs[i].update(yout)
-			s2.set('sig_2',n_curr,yout) # record yout in sig_2 to check the plot
+			avg_prev = 0
+			n_avg = 3
+			for j in range(n_avg):
+				avg_prev += abs(fifo_outs[i].get(j))
+			avg_prev = avg_prev/n_avg
+			guess = 0
+			if avg_prev>16:
+				guess = 1
+			s2.set('sig_1',n_curr,guess)
+			s2.set('sig_2',n_curr,avg_prev) # record yout in sig_2 to check the plot
 
 
 		########################
@@ -111,7 +120,7 @@ def process_wav(fpath_sig_in):
 
 		# save intermediate signals as needed, for plotting
 		#  add signals to this list, as desired!
-		s2.set('sig_1',n_curr,xin)
+		# s2.set('sig_1',n_curr,xin)
 		# s2.set('sig_2',n_curr,2 * xin)
 
 
