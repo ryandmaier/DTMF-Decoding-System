@@ -24,6 +24,16 @@ f1 = [697, 1209]
 f2 = [697, 1336]
 f4 = [770, 1209]
 f5 = [770, 1336]
+
+# Dictionary maps detected frequency array to corresponding symbol
+# detected frequency array = 1 where [697, 770, 1209, 1336] is detected in the input
+f_dict = {
+	'1010' : 1,
+	'1001' : 2,
+	'0110' : 4,
+	'0101' : 5
+}
+
 #Only testing for these 4 freq.
 
 
@@ -39,7 +49,7 @@ def process_wav(fpath_sig_in):
 
 	###############################
 	# setup signal info and analyzer
-	td_sig_list = ['sig_1','sig_2']
+	td_sig_list = ['sig_1','sig_2','sig_3','sig_4']
 	fs = 4000
 
 	s2 = cpe367_sig_analyzer(td_sig_list,fs)
@@ -84,9 +94,10 @@ def process_wav(fpath_sig_in):
 		xin = s2.get('xin',n_curr)
 		fifo_in.update(xin)
 
-		symbol_val_det = 0
+		determined_freqs = [0, 0, 0, 0]
 
-		for i in range(len(w0)): # for each frequency
+		# loop for each frequency - Applies BPF, abs(), LPF w avg, and determines if each freq is present
+		for i in range(len(w0)):
 			w = w0[i]
 			print("i =",i," , f_bp =",round(w * 2000/math.pi,5))
 			print("fvtool([",g,"],[1,-",2*r*math.cos(w),",",r*r,"],'Fs',4000)")
@@ -95,15 +106,16 @@ def process_wav(fpath_sig_in):
 			yout = int(round(yout))
 			fifo_outs[i].update(yout)
 			avg_prev = 0
-			n_avg = 3
+			n_avg = 20
 			for j in range(n_avg): # takes average of last n_avg youts, similar effect to Low Pass Filter
 				avg_prev += abs(fifo_outs[i].get(j))
 			avg_prev = avg_prev/n_avg
 			guess = 0
 			if avg_prev>16: # if avg_prev is above the threshold, the frequency is assumed to be present
 				guess = 1
-			s2.set('sig_1',n_curr,guess) # record in sig_1 to check the plot
-			s2.set('sig_2',n_curr,avg_prev) # record in sig_2 to check the plot
+			determined_freqs[i] = guess # record 1 if frequency w is present in the signal for this n_curr
+			sig = 'sig_' + str(i+1) # sig_1 through sig_4 - plots of the guesses for each w
+			s2.set(sig,n_curr,guess) # record sig_i plot of frequency guess
 
 
 		########################
@@ -123,8 +135,8 @@ def process_wav(fpath_sig_in):
 		# s2.set('sig_1',n_curr,xin)
 		# s2.set('sig_2',n_curr,2 * xin)
 
-
 		# save detector symbol
+		symbol_val_det = get_symbol_from_freqs_detected(determined_freqs)
 		s2.set('symbol_det',n_curr,symbol_val_det)
 
 		# get correct symbol
@@ -152,7 +164,14 @@ def process_wav(fpath_sig_in):
 
 
 
-
+def get_symbol_from_freqs_detected(detected_freqs):
+	key = ''
+	for bin in detected_freqs:
+		key += str(bin)
+	print(key)
+	if key in f_dict.keys():
+		return f_dict.get(key)
+	return 1
 
 
 ############################################
