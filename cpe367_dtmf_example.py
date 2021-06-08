@@ -12,6 +12,7 @@ import math
 
 import matplotlib.pyplot as plt
 import numpy as np
+from fifo import my_fifo
 
 #from cpe367_wav import cpe367_wav
 from cpe367_sig_analyzer import cpe367_sig_analyzer
@@ -34,20 +35,20 @@ def process_wav(fpath_sig_in):
 	: read a WAV file and filter, pre-subsample
 	: return: DFT
 	"""
-	
-		
+
+
 	###############################
 	# setup signal info and analyzer
 	td_sig_list = ['sig_1','sig_2']
 	fs = 4000
-	
+
 	s2 = cpe367_sig_analyzer(td_sig_list,fs)
 	s2.load(fpath_sig_in)
 	s2.print_desc()
-	
+
 	# to do: setup filters
 	m = 10
-	bk = 1 / M #Average LPF
+	bk = 1 / m #Average LPF
 
 	#----------BPF Set Up--------------#
 	#w0 for dif frequencies
@@ -56,7 +57,14 @@ def process_wav(fpath_sig_in):
 	w1209 = 0.6045 * math.pi
 	w1336 = 0.668 * math.pi
 	w0 = [w697, w770, w1209, w1336] #Array w/ each filter phase
-	
+
+	#----------FIFO Set Up-------------#
+	fifo_in = my_fifo(m)
+	fifo_outs = [0] * len(w0) # Output Fifo for each of the 4 BPFs
+	for i in range(len(w0)):
+		ff = my_fifo(m)
+		fifo_outs[i] = ff
+
 	#Radius Value 0.9 <= r < 1.0
 	r = 0.95
 	g = 1 - r #Gain factor (from doc)
@@ -65,24 +73,33 @@ def process_wav(fpath_sig_in):
 	b0 = g
 	a2 = r ** 2
 	#loop through w0 for dif bandpass filters
-	a1 = r * math.cos() #varies with phase
+	a1 = r * math.cos(w0[0]) #varies with phase
 
-	#y[n] = b0 * x[n] + a1 * y[n-1] + a2 * y[n-2] (Next Step)
+	# y[n] = b0 * x[n] + a1 * y[n-1] + a2 * y[n-2] (Next Step)
+	# y[n] = g * x[n] + 2r*cos(w) * y[n-1] + r^2 * y[n-2]
 
-	# process input	
+	# process input
 	xin = 0
 	for n_curr in range(s2.get_len()):
 		xin = s2.get('xin',n_curr)
-		
+		fifo_in.update(xin)
+		for i in range(len(w0)):
+			w = w0[i]
+			yout = 0 # y[n] = g * x[n] + 2r*cos(w) * y[n-1] + r^2 * y[n-2]
+			# print(i,"w -> [",g,",",2*r*math.cos(w),",",r*r,"]")
+			print(i,": fvtool([",g,"],[1, -",2*r*math.cos(w),", -",r*r,"],’Fs’,4000)")
+			# add yout to one of the sigs
+			fifo_outs[i].update(yout)
+
 		########################
 		# evaluate each filter
-		
+
 			# update history and store newest input
-			
+
 			# evaluate difference equations
-						
+
 			# update history and store current output
-					
+
 		########################
 		# combine results from filtering stages
 		symbol_val_det = 0
@@ -101,28 +118,28 @@ def process_wav(fpath_sig_in):
 		# compare detected signal to correct signal
 		symbol_val_err = 0
 		if symbol_val != symbol_val_det: symbol_val_err = 1
-		
+
 		# save error signal
 		s2.set('error',n_curr,symbol_val_err)
-		
-	
+
+
 	# display mean of error signal
 	err_mean = s2.get_mean('error')
 	print('mean error = '+str( round(100 * err_mean,1) )+'%')
-		
+
 	# plot results
 	plot_sig_list = ['symbol_val','symbol_det','error']
 	plot_sig_list.extend(td_sig_list)
-	
+
 	s2.plot(plot_sig_list)
-	
+
 	return True
 
 
 
-	
-	
-	
+
+
+
 ############################################
 ############################################
 # define main program
@@ -135,27 +152,27 @@ def main():
 		print('Current version: ')
 		print(sys.version)
 		return False
-		
+
 	# check args
 	if len(sys.argv) != 1:
 		print('usage: python cpe367_dtmf_example.py')
 		return False
-	
+
 	# assign file name
 	fpath_sig_in = 'dtmf_signals_slow.txt'
 	# fpath_sig_in = 'dtmf_signals_fast.txt'
-	
-	
+
+
 	# let's do it!
 	return process_wav(fpath_sig_in)
 
 
-	
-	
+
+
 ############################################
 ############################################
 # call main function
 if __name__ == '__main__':
-	
+
 	main()
 	quit()
