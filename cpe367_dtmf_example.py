@@ -96,14 +96,14 @@ def process_wav(fpath_sig_in):
 			fifo_outs[i].update(yout)
 			avg_prev = 0
 			n_avg = 3
-			for j in range(n_avg):
+			for j in range(n_avg): # takes average of last n_avg youts, similar effect to Low Pass Filter
 				avg_prev += abs(fifo_outs[i].get(j))
 			avg_prev = avg_prev/n_avg
 			guess = 0
-			if avg_prev>16:
+			if avg_prev>16: # if avg_prev is above the threshold, the frequency is assumed to be present
 				guess = 1
-			s2.set('sig_1',n_curr,guess)
-			s2.set('sig_2',n_curr,avg_prev) # record yout in sig_2 to check the plot
+			s2.set('sig_1',n_curr,guess) # record in sig_1 to check the plot
+			s2.set('sig_2',n_curr,avg_prev) # record in sig_2 to check the plot
 
 
 		########################
